@@ -5,6 +5,75 @@ import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from libs.monitoring import log, LogLevel
+import sys
+import re
+from datetime import datetime
+
+def read_last_processed_data(filename_starts_with):
+    """
+    Read the most recent processed CSV file from a specified folder based on filename pattern.
+
+    Args:
+        filename_starts_with (str): Prefix of the filename to match and retrieve the most recent processed file.
+
+    Returns:
+        pd.DataFrame: DataFrame containing the data from the most recent processed CSV file.
+
+    Raises:
+        FileNotFoundError: If no processed files are found matching the filename pattern.
+        ValueError: If there are issues parsing the dates from the filenames.
+        pd.errors.ParserError: If there are issues parsing the CSV file.
+
+    Notes:
+        The function assumes processed CSV files are stored in a folder structure relative to the script's parent directory.
+        It matches filenames starting with the provided prefix and extracts the most recent file based on date information in the filename.
+
+    Example:
+        df = read_last_processed_data('movies_cleaned_data')
+        print(df.head())
+    """
+    # Get data directories
+    current_dir = os.getcwd()
+    parent_dir = os.path.dirname(current_dir)
+    sys.path.append(parent_dir)
+
+    # Define the path to the processed data folder
+    processed_data_path = parent_dir + '/data/processed/'
+
+    # List all files in the processed data folder
+    files = os.listdir(processed_data_path)
+
+    # Regular expression to match the date pattern in the filenames
+    date_pattern = re.compile(r'_(\d{4}-\d{2}-\d{2})\.csv')
+
+    # Extract dates from filenames
+    dates = []
+    for file in files:
+        if file.startswith(filename_starts_with):
+            match = date_pattern.search(file)
+            if match:
+                date_str = match.group(1)
+                try:
+                    # Convert date string to datetime object
+                    date = datetime.strptime(date_str, '%Y-%m-%d')
+                    dates.append(date)
+                except ValueError:
+                    # Ignore files with invalid date formats
+                    continue
+
+    # Determine the most recent date
+    if dates:
+        last_processed_date = max(dates).strftime('%Y-%m-%d')
+    else:
+        print("No processed files found.")
+
+    file_path = f'{processed_data_path}/{filename_starts_with}_{last_processed_date}.csv'
+
+    print(f'Reading {file_path}...')
+    df = pd.read_csv(file_path, engine='python', on_bad_lines='skip')
+
+    return df
+
 
 def upload_csvfile(csv_file, local_path: str) -> pd.DataFrame:
     """Get a CSV file and store it in a local folder.
