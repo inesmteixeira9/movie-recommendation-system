@@ -9,23 +9,23 @@ import sys
 import re
 from datetime import datetime
 
-def read_last_processed_data(filename_starts_with):
+def read_last_processed_data(filename_starts_with, format='%Y-%m-%d', file_type='csv'):
     """
-    Read the most recent processed CSV file from a specified folder based on filename pattern.
+    Read the most recent processed CSV or PKL file from a specified folder based on filename pattern.
 
     Args:
         filename_starts_with (str): Prefix of the filename to match and retrieve the most recent processed file.
 
     Returns:
-        pd.DataFrame: DataFrame containing the data from the most recent processed CSV file.
+        pd.DataFrame: DataFrame containing the data from the most recent processed CSV or PKL file.
 
     Raises:
         FileNotFoundError: If no processed files are found matching the filename pattern.
         ValueError: If there are issues parsing the dates from the filenames.
-        pd.errors.ParserError: If there are issues parsing the CSV file.
+        pd.errors.ParserError: If there are issues parsing the CSV or PKL file.
 
     Notes:
-        The function assumes processed CSV files are stored in a folder structure relative to the script's parent directory.
+        The function assumes processed CSV or PKL files are stored in a folder structure relative to the script's parent directory.
         It matches filenames starting with the provided prefix and extracts the most recent file based on date information in the filename.
 
     Example:
@@ -44,7 +44,7 @@ def read_last_processed_data(filename_starts_with):
     files = os.listdir(processed_data_path)
 
     # Regular expression to match the date pattern in the filenames
-    date_pattern = re.compile(r'_(\d{4}-\d{2}-\d{2})\.csv')
+    date_pattern = re.compile(r'_(\d{4}-\d{2}-\d{2})\.')
 
     # Extract dates from filenames
     dates = []
@@ -55,7 +55,7 @@ def read_last_processed_data(filename_starts_with):
                 date_str = match.group(1)
                 try:
                     # Convert date string to datetime object
-                    date = datetime.strptime(date_str, '%Y-%m-%d')
+                    date = datetime.strptime(date_str, format)
                     dates.append(date)
                 except ValueError:
                     # Ignore files with invalid date formats
@@ -63,15 +63,18 @@ def read_last_processed_data(filename_starts_with):
 
     # Determine the most recent date
     if dates:
-        last_processed_date = max(dates).strftime('%Y-%m-%d')
+        last_processed_date = max(dates).strftime(format)
     else:
         print("No processed files found.")
 
-    file_path = f'{processed_data_path}/{filename_starts_with}_{last_processed_date}.csv'
+    file_path = f'{processed_data_path}{filename_starts_with}_{last_processed_date}.{file_type}'
 
     print(f'Reading {file_path}...')
-    df = pd.read_csv(file_path, engine='python', on_bad_lines='skip')
-
+    if file_type == 'csv':
+        df = pd.read_csv(file_path, engine='python', on_bad_lines='skip')
+    else:
+        df = read_pkl(file_path)
+        
     return df
 
 
